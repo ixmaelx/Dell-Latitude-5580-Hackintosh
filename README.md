@@ -29,7 +29,7 @@ Nearly everything works. Shared to save others the trial-and-error.
 | Audio (speakers, mic, jack) | ✅ | AppleALC |
 | **Wi-Fi** | ✅ | AirportItlwm **2.3.0** — ⚠️ **macOS-version-locked**, see [below](#-wi-fi-is-tied-to-your-exact-macos-version) |
 | **Bluetooth** | ✅ | Intel 8265 — see [Bluetooth fix](#bluetooth-intel-8265--ventura-134) |
-| Battery / sleep / lid | ✅ | SMCBatteryManager |
+| Battery / sleep / lid | ✅ | SMCBatteryManager — **sleep needs NVMeFix**, see [note](#sleep--nvme-panic) |
 | Keyboard + backlight | ✅ | VoodooPS2 |
 | **Touchpad gestures + TrackPoint + 3 buttons** | ✅ | see [TrackPoint fix](#trackpoint-buttons--alpshid) |
 | CPU temp / fan sensors | ✅ | SMCProcessor + SMCSuperIO (read with Hot, Stats, iStat…) |
@@ -76,12 +76,15 @@ Two things were needed:
 
    (Add writes fresh zeros; Delete wipes stale/corrupt values each boot.)
 
+### Sleep / NVMe panic
+If your SSD is a cheap generic NVMe (this build shipped with a no-name **"OSC PCIe 512GB"**), macOS can kernel-panic on sleep: `panic … 3rd party NVMe controller. Loss of MMIO space … @IONVMeController.cpp` — "shut down improperly" on wake. **Fix = `NVMeFix.kext`** (included, loads right after Lilu). Disabling hibernation alone (`pmset -a hibernatemode 0 standby 0 autopoweroff 0`) was **not** enough by itself. If it still panics with a really bad SSD, the ultimate fix is swapping it for a Samsung/WD/Crucial.
+
 ### TrackPoint buttons — AlpsHID
 Plain VoodooI2C gives touchpad gestures but the **TrackPoint's 3 physical buttons don't work** (known VoodooI2C ALPS limitation). Fix = **[AlpsHID](https://github.com/blankmac/AlpsHID) v1.2** + the **patched VoodooI2CHID** that ships in the AlpsHID release zip (the stock VoodooI2CHID lacks the needed fix). Load order: `VoodooI2C` → `VoodooI2CHID` → `AlpsHID`. Result: gestures **and** TrackPoint **and** all 3 buttons work together.
 
 ## Kexts
 
-AirportItlwm/itlwm 2.3.0 · AppleALC 1.9.7 · Lilu 1.7.2 · VirtualSMC 1.3.7 (+SMCBatteryManager, SMCLightSensor, **SMCProcessor, SMCSuperIO** — all 1.3.7) · WhateverGreen 1.7.0 · IntelMausi 1.0.8 · RestrictEvents 1.1.6 · **BlueToolFixup 2.7.2 · IntelBluetoothFirmware 2.4.0 · IntelBTPatcher 2.4.0** · **AlpsHID 1.2 · VoodooI2C 2.9.1 · VoodooI2CHID (juico-patched) · VoodooInput 1.1.6** · VoodooPS2Controller 2.3.7 · USBToolBox
+AirportItlwm/itlwm 2.3.0 · AppleALC 1.9.7 · Lilu 1.7.2 · **NVMeFix 1.1.3** · VirtualSMC 1.3.7 (+SMCBatteryManager, SMCLightSensor, **SMCProcessor, SMCSuperIO** — all 1.3.7) · WhateverGreen 1.7.0 · IntelMausi 1.0.8 · RestrictEvents 1.1.6 · **BlueToolFixup 2.7.2 · IntelBluetoothFirmware 2.4.0 · IntelBTPatcher 2.4.0** · **AlpsHID 1.2 · VoodooI2C 2.9.1 · VoodooI2CHID (juico-patched) · VoodooInput 1.1.6** · VoodooPS2Controller 2.3.7 · USBToolBox
 
 > **Kext versions matter.** VirtualSMC plugins (SMCProcessor/SMCSuperIO/etc.) must match VirtualSMC's version. AirportItlwm must match your macOS version (see Wi-Fi note). When updating macOS, update Lilu + all Lilu-based kexts together.
 
